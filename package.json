@@ -1,0 +1,32 @@
+{
+  "name": "jsx-service",
+  "version": "1.0.0",
+  "description": "A service that converts jsx to html",
+  "main": "index.js",
+  "module": "main.js",
+  "author": "Biola Oyeniyi",
+  "license": "MIT",
+  "private": false,
+  "scripts": {
+    "test": "mocha tests",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@polka/send-type": "^0.5.2",
+    "body-parser": "^1.18.3",
+    "emotion": "^10.0.9",
+    "emotion-server": "^10.0.9",
+    "esm": "^3.2.18",
+    "htm": "^2.1.1",
+    "polka": "^0.5.2",
+    "react": "^16.8.4",
+    "react-dom": "^16.8.4",
+    "require-from-memory": "^1.0.0",
+    "require-from-string": "^2.0.2"
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "mocha": "^6.0.2",
+    "supertest": "^4.0.2"
+  }
+}
