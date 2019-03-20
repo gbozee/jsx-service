@@ -1,5 +1,6 @@
 // ESM syntax is supported.
 import { createComponentFile } from "./src/file_creation";
+import helpers from "./src/helpers"
 import {
   getHTML,
   getHTMLFromText,
@@ -11,5 +12,6 @@ export {
   getHTML,
   getHTMLFromText,
   app,
+  helpers,
   createHTMLDirectly
 };
