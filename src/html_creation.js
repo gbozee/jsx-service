@@ -26,7 +26,7 @@ function requireFromString(filename, src) {
   m._compile(src, filename);
   return m;
 }
-export async function createHTMLDirectly(text, name, props = {}) {
+export async function createHTMLDirectly(text, name="css.js", props = {}) {
   let file_module = requireFromString(name, text);
   return await getHTML(file_module.exports.default, props);
 }

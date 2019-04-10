@@ -39,16 +39,13 @@ describe("Array", function() {
         done();
       });
     });
-    it("Should return a text response of the html", function(done) {
-      request(app.handler)
+    it("Should return a text response of the html", async function() {
+      let response = await request(app.handler)
         .post("/generate")
         .send({ text, props: { name: "Abiola" } })
         .set("Accept", "application/json")
-        .expect(200)
-        .then(response => {
-          expect(response.body.html).to.equal("<div>Abiola</div>");
-          done();
-        });
+        .expect(200);
+      expect(response.body.html).to.equal("<div>Abiola</div>");
     });
   });
   describe("React components with emotion styling", () => {
@@ -115,15 +112,17 @@ describe("Array", function() {
     }
 
       `;
-      let file = path.resolve(__dirname, "..", "modules", "css.js");
+    let file = path.resolve(__dirname, "..", "modules", "css.js");
 
     it("Should generate an html file from the module", function(done) {
-      createHTMLDirectly(text2, file, { name: "Shola", age: 25 }).then(content => {
-        expect(content).includes("data-emotion-css");
-        expect(content).include("Shola");
-        expect(content).include("25");
-        done();
-      });
+      createHTMLDirectly(text2, file, { name: "Shola", age: 25 }).then(
+        content => {
+          expect(content).includes("data-emotion-css");
+          expect(content).include("Shola");
+          expect(content).include("25");
+          done();
+        }
+      );
     });
   });
 });

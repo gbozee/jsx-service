@@ -1,3 +1,5 @@
+import { createHTMLDirectly } from "../html_creation";
+
 function splitAndClean(text) {
   return text
     .split("\n")
@@ -7,9 +9,15 @@ function splitAndClean(text) {
 
 function createHTMLFromSchema(schema, props = {}) {
   let text = removeDuplicates(schema);
+  return createHTMLDirectly(text, undefined, props);
 }
 
-function removeDuplicates({ files, resolutions }) {
+function removeDuplicates({ files }) {
+  let resolutions = {};
+  for (let i in files) {
+    let dd = getDependencies(files[i]);
+    resolutions[i] = dd;
+  }
   let componentNames = Object.keys(resolutions);
   let nonRoot = componentNames.filter(
     (x, i) => i !== componentNames.indexOf("root")
@@ -38,6 +46,8 @@ function removeDuplicates({ files, resolutions }) {
   // }
   let rootJoin = dependencies.map(x => files[x]).join("\n");
   rootJoin = removeDefaultExport(rootJoin, "\n");
+  rootJoin = reOrderImports(rootJoin, dependencies);
+  rootJoin = removeDuplicateImports(rootJoin);
   let splitting = splitImportAndNonImport(rootJoin, dependencies);
   let importPath = splitting.modulePathImport
     .map(x => {
@@ -45,7 +55,6 @@ function removeDuplicates({ files, resolutions }) {
       return files[i];
     })
     .join("\n");
-  debugger;
   rootJoin = []
     .concat(
       ...splitting.notModulePathImport,
@@ -53,15 +62,19 @@ function removeDuplicates({ files, resolutions }) {
       splitting.withoutImport
     )
     .join("\n");
-
+  rootJoin = removeDefaultExport(rootJoin, "\n");
+  rootJoin = reOrderImports(rootJoin, dependencies);
+  rootJoin = removeDuplicateImports(rootJoin);
+  rootJoin = cleanSnippet(rootJoin, false);
   let orderedImport = [];
   let finalText = rootJoin;
-  finalText = reOrderImports(finalText, dependencies);
-  dependencies.forEach((x, index) => {
-    let replacement = replaceImport(finalText, x, files[x], "\n");
-    finalText = replacement;
-    orderedImport.push(replacement.split("\n"));
-  });
+  // finalText = reOrderImports(finalText, dependencies);
+  orderedImport = finalText;
+  // dependencies.forEach((x, index) => {
+  //   let replacement = replaceImport(finalText, x, files[x], "\n");
+  //   finalText = replacement;
+  //   orderedImport.push(replacement.split("\n"));
+  // });
   // let orderedImport = dependencies.map((x, index) => {
   //   let hmo = reOrderImports(rootJoin, x);
   //   let replacement = replaceImport(hmo, x, files[x], "\n");
@@ -149,6 +162,56 @@ function splitImportAndNonImport(text, modulePath) {
     withoutImport
   };
 }
+
+/**
+ * extract an array of local dependencies from the module passed.
+ * @param {*} codeSnippet Sample code snippet to pull dependencies from
+ */
+function getDependencies(codeSnippet) {
+  let snippetByLinesArray = splitAndClean(codeSnippet);
+  let linesWithImport = snippetByLinesArray
+    .map(x => x.trim())
+    .filter(x => x.startsWith("import "));
+  let localModuleImport = linesWithImport.filter(x => {
+    let match = x.match(/.\/|..\//g);
+    if (Boolean(match)) {
+      return match.length > 0;
+    }
+    return false;
+  });
+  let moduleNames = localModuleImport.map(x =>
+    x.split(" ").find(o => {
+      let match = o.match(/.\/|..\//g);
+      if (Boolean(match)) {
+        return match.length > 0;
+      }
+      return false;
+    })
+  );
+  return moduleNames
+    .map(x => x.replace(";", ""))
+    .map(x => x.replace(/"|'/g, ""));
+}
+/**
+ * Remove duplicate code snippet by crawling through each line of code and comparing the
+ * previous item from the next item.
+ * @param {*} codeSnippet Sample snippet to clean
+ */
+function cleanSnippet(codeSnippet, asString = true) {
+  let snippetByLinesArray = splitAndClean(codeSnippet);
+  let noDuplicateArray = [];
+  let currentItem = "";
+  for (let i of snippetByLinesArray) {
+    if (i.trim() !== "" && i !== currentItem) {
+      noDuplicateArray.push(i);
+    }
+    currentItem = i;
+  }
+  if (asString) {
+    return noDuplicateArray.join("\n");
+  }
+  return noDuplicateArray;
+}
 export default {
   createHTMLFromSchema,
   removeDuplicates,
@@ -156,5 +219,7 @@ export default {
   removeNewlines,
   replaceImport,
   removeDuplicateImports,
-  reOrderImports
+  reOrderImports,
+  getDependencies,
+  cleanSnippet
 };
