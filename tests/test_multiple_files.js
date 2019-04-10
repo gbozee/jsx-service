@@ -73,6 +73,20 @@ describe("Multiple components depending on each other", function() {
       expect(helpers.getDependencies(utils)).to.eql([]);
       expect(helpers.getDependencies(Text)).to.eql(["./utils"]);
       expect(helpers.getDependencies(index)).to.eql(["./utils", "./Text"]);
+      expect(
+        helpers.getDependencies(`
+      import React from 'react';
+      import html from "../utils";
+      import age from "../../../age";
+      
+      export function Heading(props){
+          return html\`<h1 ...\${props}/>\`
+      }
+      function Text(props){
+          return html\`<p ...\${props}/>\`
+      }
+      export default Text`)
+      ).to.eql(["./utils", "./age"]);
     });
     it("should remove duplicate lines", () => {
       expect(
@@ -179,6 +193,26 @@ describe("Multiple components depending on each other", function() {
             "\n"
           )
         ).to.equal(helpers.removeNewlines(mergedResult, "\n"));
+        expect(
+          helpers.removeNewlines(
+            helpers.replaceImport(
+              `
+            import React from 'react';
+            import html from "../utils";
+            
+            export function Heading(props){
+                return html\`<h1 ...\${props}/>\`
+            }
+            function Text(props){
+                return html\`<p ...\${props}/>\`
+            }
+            export default Text`,
+              "./utils",
+              utils
+            ),
+            "\n"
+          )
+        ).to.equal(helpers.removeNewlines(mergedResult, "\n"));
       });
       it("should remove duplicate imports", () => {
         expect(
@@ -198,6 +232,13 @@ describe("Multiple components depending on each other", function() {
             export default Text`
           )
         );
+        expect(
+          helpers.removeNewlines(
+            helpers.removeDuplicateImports(`
+        import React from 'react';
+        import React from "react";`)
+          )
+        ).to.equal(`import React from 'react';`);
       });
     });
     it("should remove duplicate dependencies", () => {
@@ -251,6 +292,57 @@ describe("Multiple components depending on each other", function() {
           root: `
           import React from 'react';
           import html from "./utils";
+          import Text, {Heading} from "./Text";
+      
+          export default function ({name,age, className}){
+              return html\`<div>
+                  <\${Heading} className=\${className}>\${name}</\${Heading}>
+                  <\${Text}>\${age}</\${Text}>
+              </div>\`
+          }
+          `
+        }
+      };
+      let response = await request(app.handler)
+        .post("/generate")
+        .send({
+          schema,
+          props: {
+            name: "Hello",
+            age: "World",
+            className: "two"
+          }
+        })
+        .set("Accept", "application/json")
+        .expect(200);
+      expect(response.body.html).to.equal(
+        '<div><h1 class="two">Hello</h1><p>World</p></div>'
+      );
+    });
+    it("Scenario for similar module used in different file location", async () => {
+      let schema = {
+        files: {
+          "./Text": `
+          import React from 'react';
+          import html from "../utils";
+          
+          export function Heading({className, children}){
+              return html\`<h1 className=\${className}>\${children}</h1>\`
+          }
+          function Text(props){
+              return html\`<p ...\${props}/>\`
+          }
+          export default Text`,
+          "./utils": `
+          import React from 'react';
+          import htm from 'htm';
+          const html = htm.bind(React.createElement)
+      
+          export default html;
+          `,
+          root: `
+          import React from 'react';
+          import html from "../../utils";
           import Text, {Heading} from "./Text";
       
           export default function ({name,age, className}){

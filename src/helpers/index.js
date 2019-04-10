@@ -1,4 +1,5 @@
 import { createHTMLDirectly } from "../html_creation";
+import babelTransform from "./babelTransform";
 
 function splitAndClean(text) {
   return text
@@ -9,6 +10,9 @@ function splitAndClean(text) {
 
 function createHTMLFromSchema(schema, props = {}) {
   let text = removeDuplicates(schema);
+  if (schema.babel) {
+    return babelTransform.compile(text, undefined, props);
+  }
   return createHTMLDirectly(text, undefined, props);
 }
 
@@ -123,7 +127,9 @@ function replaceImport(
 }
 function removeDuplicateImports(text, delimiter = "\n") {
   let { importLines, withoutImport } = splitImportAndNonImport(text);
-  let noDuplicate = [...new Set(importLines)].concat(withoutImport);
+  let noDuplicate = [
+    ...new Set(importLines.map(x => x.replace(/"/g, "'")))
+  ].concat(withoutImport);
   let result = noDuplicate.join(delimiter);
   return result;
 }
@@ -188,9 +194,13 @@ function getDependencies(codeSnippet) {
       return false;
     })
   );
-  return moduleNames
+  moduleNames = moduleNames
     .map(x => x.replace(";", ""))
     .map(x => x.replace(/"|'/g, ""));
+  let transformedModuleNames = moduleNames.map(oo =>
+    [...new Set(oo.split("../"))].map(x => (x === "" ? "./" : x)).join("")
+  );
+  return transformedModuleNames;
 }
 /**
  * Remove duplicate code snippet by crawling through each line of code and comparing the
